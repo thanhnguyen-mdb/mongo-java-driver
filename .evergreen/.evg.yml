@@ -858,7 +858,6 @@ tasks:
   - name: "generate-sbom-task"
     tags: [ "sbom" ]
     commands:
-      - func: "assume-aws-test-secrets-role"
       - command: shell.exec
         type: "test"
         params:
@@ -870,28 +869,6 @@ tasks:
             bash .evergreen/generate-sbom.sh
             echo "SBOM generation complete:"
             ls -lh sbom.cdx.json sbom.cdx.parlay.json || true
-      - command: s3.put
-        params:
-          aws_key: ${AWS_ACCESS_KEY_ID}
-          aws_secret: ${AWS_SECRET_ACCESS_KEY}
-          aws_session_token: ${AWS_SESSION_TOKEN}
-          local_file: sbom.cdx.json
-          remote_file: ${UPLOAD_BUCKET}/${build_variant}/${revision}/${version_id}/${build_id}/artifacts/${task_id}-${execution}-sbom.cdx.json
-          bucket: mciuploads
-          permissions: public-read
-          content_type: "application/json"
-          display_name: "sbom.cdx.json"
-      - command: s3.put
-        params:
-          aws_key: ${AWS_ACCESS_KEY_ID}
-          aws_secret: ${AWS_SECRET_ACCESS_KEY}
-          aws_session_token: ${AWS_SESSION_TOKEN}
-          local_file: sbom.cdx.parlay.json
-          remote_file: ${UPLOAD_BUCKET}/${build_variant}/${revision}/${version_id}/${build_id}/artifacts/${task_id}-${execution}-sbom.cdx.parlay.json
-          bucket: mciuploads
-          permissions: public-read
-          content_type: "application/json"
-          display_name: "sbom.cdx.parlay.json"
 
   - name: "test-bson-and-crypt-task"
     commands:
