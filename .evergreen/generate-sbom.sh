@@ -25,7 +25,35 @@ require_cmd() {
 }
 
 log "Checking prerequisites"
-require_cmd node "Install Node.js >= 20 (https://nodejs.org/)"
+if command -v node >/dev/null 2>&1; then
+  NODE_VER_RAW="$(node -v 2>/dev/null || echo v0.0.0)"
+  NODE_MAJOR="${NODE_VER_RAW#v}"
+  NODE_MAJOR="${NODE_MAJOR%%.*}"
+else
+  NODE_MAJOR="0"
+fi
+
+# Evergreen distro images may have an older Node; bootstrap a local Node 20+ into .evergreen/node if needed.
+if [ "$NODE_MAJOR" -lt 20 ]; then
+  log "Bootstrapping Node.js 20 (current: ${NODE_VER_RAW:-none})"
+  NODE_DIR="$SCRIPT_DIR/node"
+  mkdir -p "$NODE_DIR"
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64|amd64) NODE_ARCH="x64" ;;
+    aarch64|arm64) NODE_ARCH="arm64" ;;
+    *) err "Unsupported architecture for Node bootstrap: $ARCH"; exit 1;;
+  esac
+  NODE_TGZ="node-v20.11.1-linux-${NODE_ARCH}.tar.xz"
+  NODE_URL="https://nodejs.org/dist/v20.11.1/${NODE_TGZ}"
+  wget -q -O "$NODE_DIR/${NODE_TGZ}" "$NODE_URL" || { err "Failed to download Node.js $NODE_URL"; exit 1; }
+  tar -xf "$NODE_DIR/${NODE_TGZ}" -C "$NODE_DIR" || { err "Failed to extract Node.js"; exit 1; }
+  export PATH="$NODE_DIR/node-v20.11.1-linux-${NODE_ARCH}/bin:$PATH"
+  hash -r || true
+  log "Using bootstrapped Node: $(node -v)"
+fi
+
+require_cmd node "Install Node.js >= 20 (https://nodejs.org/) or allow bootstrap"
 require_cmd npm "Install Node.js/npm"
 require_cmd wget "Install wget (e.g., sudo apt-get install -y wget)"
 require_cmd jq "Install jq (e.g., sudo apt-get install -y jq)"
