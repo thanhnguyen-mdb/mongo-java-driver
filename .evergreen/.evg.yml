@@ -832,14 +832,14 @@ pre:
   - func: "fix-absolute-paths"
 
 post:
-  - func: "stop-mongo-orchestration"
-  - func: "upload-mo-artifacts"
-  - func: "upload-test-results"
-  - func: "assume-aws-test-secrets-role"
-  - func: "stop-load-balancer"
-  - func: "stop-aws"
-  - func: "stop-mongohoused"
-  - func: "stop-csfle-servers"
+  # - func: "stop-mongo-orchestration"
+  # - func: "upload-mo-artifacts"
+  # - func: "upload-test-results"
+  # - func: "assume-aws-test-secrets-role"
+  # - func: "stop-load-balancer"
+  # - func: "stop-aws"
+  # - func: "stop-mongohoused"
+  # - func: "stop-csfle-servers"
   - func: "cleanup"
 
 tasks:
