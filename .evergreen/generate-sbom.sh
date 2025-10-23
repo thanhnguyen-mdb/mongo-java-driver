@@ -62,14 +62,25 @@ require_cmd tar "Install tar (e.g., sudo apt-get install -y tar)"
 # Ensure we have a Java runtime >=17 for Gradle plugins used during dependency resolution.
 JAVA_MAJOR=0
 if command -v java >/dev/null 2>&1; then
-  # java -version outputs 'openjdk version "21.0.2"' etc.
+  # java -version outputs lines like:
+  #   openjdk version "21.0.2"  or  openjdk version "1.8.0_402"
   JAVA_VERSION_LINE="$(java -version 2>&1 | head -n1)"
-  # Extract first numeric token in quotes if present.
-  JAVA_MAJOR="$(echo "$JAVA_VERSION_LINE" | sed -E 's/.*version "([0-9]+).*".*/\1/' || echo 0)"
+  if [[ $JAVA_VERSION_LINE =~ version\ \"([0-9]+)\.([0-9]+)\. ]]; then
+    MAJOR_PART="${BASH_REMATCH[1]}"
+    MINOR_PART="${BASH_REMATCH[2]}"
+    if [ "$MAJOR_PART" = "1" ]; then
+      # Java 8 reports 1.8.x
+      JAVA_MAJOR="$MINOR_PART"
+    else
+      JAVA_MAJOR="$MAJOR_PART"
+    fi
+  else
+    JAVA_MAJOR=0
+  fi
 fi
 
 pick_env_jdk() {
-  for CAND in "$JDK21" "$JDK17"; do
+  for CAND in "${JDK21:-}" "${JDK17:-}"; do
     if [ -n "$CAND" ] && [ -x "$CAND/bin/java" ]; then
       export JAVA_HOME="$CAND"
       export PATH="$JAVA_HOME/bin:$PATH"
