@@ -59,6 +59,55 @@ require_cmd wget "Install wget (e.g., sudo apt-get install -y wget)"
 require_cmd jq "Install jq (e.g., sudo apt-get install -y jq)"
 require_cmd tar "Install tar (e.g., sudo apt-get install -y tar)"
 
+# Ensure we have a Java runtime >=17 for Gradle plugins used during dependency resolution.
+JAVA_MAJOR=0
+if command -v java >/dev/null 2>&1; then
+  # java -version outputs 'openjdk version "21.0.2"' etc.
+  JAVA_VERSION_LINE="$(java -version 2>&1 | head -n1)"
+  # Extract first numeric token in quotes if present.
+  JAVA_MAJOR="$(echo "$JAVA_VERSION_LINE" | sed -E 's/.*version "([0-9]+).*".*/\1/' || echo 0)"
+fi
+
+pick_env_jdk() {
+  for CAND in "$JDK21" "$JDK17"; do
+    if [ -n "$CAND" ] && [ -x "$CAND/bin/java" ]; then
+      export JAVA_HOME="$CAND"
+      export PATH="$JAVA_HOME/bin:$PATH"
+      return 0
+    fi
+  done
+  return 1
+}
+
+if [ "$JAVA_MAJOR" -lt 17 ]; then
+  log "Current Java version <17 (detected: ${JAVA_MAJOR:-none}); attempting to select provided JDK environment variables"
+  if ! pick_env_jdk; then
+    log "No suitable JDK from env vars; bootstrapping Temurin JDK 21 locally"
+    JDK_DIR="$SCRIPT_DIR/jdk"
+    mkdir -p "$JDK_DIR"
+    ARCH="$(uname -m)"
+    case "$ARCH" in
+      x86_64|amd64) JDK_ARCH="x64" ;;
+      aarch64|arm64) JDK_ARCH="aarch64" ;;
+      *) err "Unsupported architecture for JDK bootstrap: $ARCH"; exit 1;;
+    esac
+    JDK_TAR="OpenJDK21U-jdk_${JDK_ARCH}_linux_hotspot.tar.gz"
+    JDK_URL="https://github.com/adoptium/temurin21-binaries/releases/latest/download/${JDK_TAR}"
+    wget -q -O "$JDK_DIR/$JDK_TAR" "$JDK_URL" || { err "Failed to download JDK ($JDK_URL)"; exit 1; }
+    tar -xzf "$JDK_DIR/$JDK_TAR" -C "$JDK_DIR" || { err "Failed to extract JDK"; exit 1; }
+    EXTRACTED="$(find "$JDK_DIR" -maxdepth 1 -type d -name 'jdk-21*' | head -n1)"
+    if [ -z "$EXTRACTED" ]; then
+      err "Could not locate extracted JDK directory"; exit 1;
+    fi
+    export JAVA_HOME="$EXTRACTED"
+    export PATH="$JAVA_HOME/bin:$PATH"
+  fi
+  JAVA_VERSION_LINE="$(java -version 2>&1 | head -n1)"
+  log "Using Java runtime: $JAVA_VERSION_LINE"
+fi
+
+require_cmd java "Install JDK >=17 or allow bootstrap"
+
 if ! npx --no-install cdxgen --version >/dev/null 2>&1; then
   log "Installing @cyclonedx/cdxgen"
   npm install @cyclonedx/cdxgen >/dev/null 2>&1 || { err "Failed to install cdxgen"; exit 1; }
