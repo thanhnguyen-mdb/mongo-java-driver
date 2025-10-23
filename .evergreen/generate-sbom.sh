@@ -26,11 +26,16 @@ log() { printf '\n[sbom] %s\n' "$*"; }
 # Ensure mise is available (installed locally in $HOME) and PATH includes shims.
 
 ensure_mise() {
+  # Installer places binary in ~/.local/bin/mise by default.
   if ! command -v mise >/dev/null 2>&1; then
     log "Installing mise"
-    curl -fsSL https://mise.run | bash >/dev/null 2>&1
+    curl -fsSL https://mise.run | bash >/dev/null 2>&1 || { log "mise install script failed"; exit 1; }
   fi
-  export PATH="$HOME/.local/share/mise/shims:$HOME/.local/share/mise/bin:$PATH"
+  # Ensure ~/.local/bin precedes so 'mise' is found even if shims absent.
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$HOME/.local/share/mise/bin:$PATH"
+  if ! command -v mise >/dev/null 2>&1; then
+    log "mise not found on PATH after install"; ls -al "$HOME/.local/bin" || true; exit 1
+  fi
 }
 
 ## resolve_toolchain_flags
