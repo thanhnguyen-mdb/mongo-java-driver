@@ -876,10 +876,11 @@ tasks:
       - command: shell.exec
         type: "test"
         params:
-          # Run at repo root so git diff paths match canonical locations
-          working_dir: "."
+          working_dir: "src"
           shell: "bash"
           script: |
+            ${PREPARE_SHELL}
+            echo "Verifying SBOM files"
             bash .evergreen/verify-sbom.sh
 
   - name: "test-bson-and-crypt-task"
