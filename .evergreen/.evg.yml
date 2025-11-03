@@ -870,6 +870,18 @@ tasks:
             echo "SBOM generation complete:"
             ls -lh sbom.cdx.json sbom.cdx.parlay.json || true
 
+  - name: "verify-sbom-task"
+    tags: [ "sbom" ]
+    commands:
+      - command: shell.exec
+        type: "test"
+        params:
+          # Run at repo root so git diff paths match canonical locations
+          working_dir: "."
+          shell: "bash"
+          script: |
+            bash .evergreen/verify-sbom.sh
+
   - name: "test-bson-and-crypt-task"
     commands:
       - func: "run-tests"
@@ -2251,6 +2263,22 @@ buildvariants:
     run_on: ubuntu2204-small
     tasks:
       - name: "generate-sbom-task"
+      - name: "verify-sbom-task"
+
+  - name: "verify-sbom"
+    display_name: "Verify SBOM freshness"
+    run_on: ubuntu2204-small
+    # Only trigger when dependency manifests or the SBOM itself change.
+    # Build variant path filtering reduces unnecessary runs; task script still re-checks for
+    # maintainability and to allow reuse in other variants.
+    paths:
+      - "gradle/libs.versions.toml"
+      - "gradle.properties"
+      - "settings.gradle.kts"
+      - "**/build.gradle.kts"
+      - "sbom.cdx.json"
+    tasks:
+      - name: "verify-sbom-task"
 
   - name: "perf"
     display_name: "Performance Tests"

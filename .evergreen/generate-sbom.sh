@@ -2,12 +2,6 @@
 set -euo pipefail
 
 # Ephemeral SBOM generator (Gradle/Java) using mise + cdxgen.
-# Design goals:
-#  - Zero persistent global toolchain changes (no `mise use -g`, no global npm installs)
-#  - Re-download only if versions not yet cached in mise store
-#  - Temporary npm cache isolated per run
-#  - Fail fast on errors (non-zero exit if SBOM generation fails)
-#
 # Environment overrides:
 #  MISE_NODE_VERSION   Node version (default 20.11.1)
 #  MISE_JAVA_VERSION   Java (Temurin) major version (default 21)
@@ -19,6 +13,7 @@ set -euo pipefail
 NODE_VERSION="${MISE_NODE_VERSION:-20.11.1}"
 JAVA_VERSION="${MISE_JAVA_VERSION:-21}"
 CDXGEN_VERSION="${CDXGEN_VERSION:-latest}" # or pin like 10.11.0
+JQ_VERSION="${JQ_VERSION:-latest}" # jq version or 'latest'
 OUT_JSON="${SBOM_OUT:-sbom.cdx.json}"
 
 log() { printf '\n[sbom] %s\n' "$*"; }
@@ -41,7 +36,7 @@ ensure_mise() {
 ## resolve_toolchain_flags
 # Returns space-separated tool@version specs required for SBOM generation.
 resolve_toolchain_flags() {
-  printf 'node@%s java@temurin-%s' "$NODE_VERSION" "$JAVA_VERSION"
+  printf 'node@%s java@temurin-%s jq@%s' "$NODE_VERSION" "$JAVA_VERSION" "$JQ_VERSION"
 }
 
 ## prepare_exec_prefix
@@ -86,10 +81,21 @@ install_toolchains() {
   mise install $tools >/dev/null
 }
 
+## format_sbom
+# Formats the SBOM JSON with jq (required). Exits non-zero if formatting fails.
+format_sbom() {
+  log "Formatting SBOM via jq@$JQ_VERSION"
+  if ! mise exec jq@"$JQ_VERSION" -- jq . "$OUT_JSON" > "$OUT_JSON.tmp" 2>/dev/null; then
+    log "jq formatting failed"; return 1
+  fi
+  mv "$OUT_JSON.tmp" "$OUT_JSON"
+}
+
 main() {
   ensure_mise
   install_toolchains
   generate_sbom
+  format_sbom
 }
 
 main "$@"
