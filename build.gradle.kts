@@ -66,19 +66,9 @@ tasks.cyclonedxBom {
     // Boms destination directory. Defaults to 'build/reports'
     setDestination(project.file("./"))
     // The file name for the generated BOMs (before the file format suffix). Defaults to 'bom'
-    setOutputName("sbom.cdx")
+    setOutputName("sbom")
     // The file format generated, can be xml, json or all for generating both. Defaults to 'all'
     setOutputFormat("json")
-    // Include BOM Serial Number. Defaults to 'true'
-    //setIncludeBomSerialNumber(false)
-    // Include License Text. Defaults to 'true'
-    //setIncludeLicenseText(true)
-    // Include resolution of full metadata for components including licenses. Defaults to 'true'
-    //setIncludeMetadataResolution(true)
-    // Override component version. Defaults to the project version
-    //setComponentVersion("2.0.0")
-    // Override component name. Defaults to the project name
-    //setComponentName("my-component")
 
     // declaration of the Object from OrganizationalContact
     var organizationalContact1 = OrganizationalContact()
@@ -93,12 +83,7 @@ tasks.cyclonedxBom {
         oe.addContact(organizationalContact1)
     }
 
-    /* //declaration of Licenses-Data
-        var license = License()
-        license.setId("Apache-2.0")
-        
-        setLicenseChoice{lc->
-            lc.addLicense(license);
-        }
-    */   
+    setVCSGit { ref ->
+        ref.url = "https://github.com/mongodb/mongo-java-driver"
+    } 
 }
