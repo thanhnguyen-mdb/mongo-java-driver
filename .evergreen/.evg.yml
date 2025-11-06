@@ -855,21 +855,6 @@ tasks:
           args:
             - ".evergreen/static-checks.sh"
 
-  - name: "generate-sbom-task"
-    tags: [ "sbom" ]
-    commands:
-      - command: shell.exec
-        type: "test"
-        params:
-          working_dir: "src"
-          shell: "bash"
-          script: |
-            ${PREPARE_SHELL}
-            echo "Generating SBOM files"
-            bash .evergreen/generate-sbom.sh
-            echo "SBOM generation complete:"
-            ls -lh sbom.cdx.json sbom.cdx.parlay.json || true
-
   - name: "verify-sbom-task"
     tags: [ "sbom" ]
     commands:
@@ -2259,25 +2244,17 @@ buildvariants:
     tasks:
       - name: "static-analysis-task"
 
-  - name: "generate-sbom"
-    display_name: "Generate SBOM"
-    run_on: ubuntu2204-small
-    tasks:
-      - name: "generate-sbom-task"
-      - name: "verify-sbom-task"
-
   - name: "verify-sbom"
     display_name: "Verify SBOM freshness"
     run_on: ubuntu2204-small
     # Only trigger when dependency manifests or the SBOM itself change.
-    # Build variant path filtering reduces unnecessary runs; task script still re-checks for
-    # maintainability and to allow reuse in other variants.
     paths:
       - "gradle/libs.versions.toml"
       - "gradle.properties"
       - "settings.gradle.kts"
+      - "build.gradle.kts"
       - "**/build.gradle.kts"
-      - "sbom.cdx.json"
+      - "sbom.json"
     tasks:
       - name: "verify-sbom-task"
 

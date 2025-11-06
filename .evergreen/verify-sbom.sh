@@ -22,8 +22,8 @@ set -euo pipefail
 #
 # Local usage: run from repo root after making changes; exit codes surface policy status.
 
-MANIFEST_PATTERNS="${MANIFEST_PATTERNS:-gradle/libs.versions.toml gradle.properties settings.gradle.kts **/build.gradle.kts}"
-SBOM_FILE="${SBOM_FILE:-sbom.cdx.json}"
+MANIFEST_PATTERNS="${MANIFEST_PATTERNS:-build.gradle.kts gradle/libs.versions.toml gradle.properties settings.gradle.kts **/build.gradle.kts}"
+SBOM_FILE="${SBOM_FILE:-sbom.json}"
 EXIT_CODE_MISSING="${EXIT_CODE_MISSING:-10}"
 DIFF_BASE="${DIFF_BASE:-}" # optional user-provided base ref
 VERBOSE="${VERBOSE:-0}"
