@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Ephemeral SBOM generator (Gradle/Java) using mise + cdxgen.
+# Ephemeral SBOM generator (Gradle/Java) using mise + CycloneDX Gradle plugin.
 # Environment overrides:
-#  MISE_NODE_VERSION   Node version (default 20.11.1)
-#  MISE_JAVA_VERSION   Java (Temurin) major version (default 21)
-#  CDXGEN_VERSION      cdxgen version or 'latest'
+#  MISE_JAVA_VERSION   Java (Temurin) major version (default from Gradle sourceCompatibility or 21)
 #  SBOM_OUT            Output filename (default sbom.cdx.json)
 #
 # Usage: bash .evergreen/generate-sbom.sh
 
-NODE_VERSION="${MISE_NODE_VERSION:-20.11.1}"
-JAVA_VERSION="${MISE_JAVA_VERSION:-21}"
-CDXGEN_VERSION="${CDXGEN_VERSION:-latest}" # or pin like 10.11.0
+## resolve_java_version
+# Determines the required Java version by finding the maximum sourceCompatibility in Gradle files.
+resolve_java_version() {
+  local max_version
+  max_version=$(find . -name "*.gradle.kts" -exec grep -h 'sourceCompatibility = JavaVersion.VERSION_' {} \; | sed 's/.*VERSION_\([0-9]*\).*/\1/' | sort -n | tail -1)
+  echo "${max_version:-21}"
+}
+
+JAVA_VERSION="${MISE_JAVA_VERSION:-$(resolve_java_version)}"
 JQ_VERSION="${JQ_VERSION:-latest}" # jq version or 'latest'
 OUT_JSON="${SBOM_OUT:-sbom.cdx.json}"
 
@@ -36,7 +40,7 @@ ensure_mise() {
 ## resolve_toolchain_flags
 # Returns space-separated tool@version specs required for SBOM generation.
 resolve_toolchain_flags() {
-  printf 'node@%s java@temurin-%s jq@%s' "$NODE_VERSION" "$JAVA_VERSION" "$JQ_VERSION"
+  printf 'java@temurin-%s jq@%s' "$JAVA_VERSION" "$JQ_VERSION"
 }
 
 ## prepare_exec_prefix
@@ -47,27 +51,14 @@ prepare_exec_prefix() {
   echo "mise exec $tools --"
 }
 
-## prepare_cdxgen_cmd
-# Chooses latest or pinned cdxgen via npx (no global install).
-prepare_cdxgen_cmd() {
-  if [[ "$CDXGEN_VERSION" == "latest" ]]; then
-    printf 'npx --yes @cyclonedx/cdxgen'
-  else
-    printf 'npx --yes @cyclonedx/cdxgen@%s' "$CDXGEN_VERSION"
-  fi
-}
-
 ## generate_sbom
-# Executes cdxgen with isolated npm cache, cleans up temp directory.
+# Executes Gradle CycloneDX plugin to generate SBOM.
 generate_sbom() {
-  log "Generating SBOM"
-  local cdxgen_cmd exec_prefix npm_tmp
-  cdxgen_cmd="$(prepare_cdxgen_cmd)"
+  log "Generating SBOM using Gradle CycloneDX plugin"
+  local exec_prefix
   exec_prefix="$(prepare_exec_prefix)"
-  npm_tmp="$(mktemp -d)"
-  MISE_NPM_CACHE="$npm_tmp" $exec_prefix bash -c "NPM_CONFIG_CACHE=$npm_tmp $cdxgen_cmd --type gradle --output '$OUT_JSON' ." || {
-    log "SBOM generation failed"; rm -rf "$npm_tmp" || true; exit 1; }
-  rm -rf "$npm_tmp" || true
+  $exec_prefix ./gradlew cyclonedxBom || {
+    log "SBOM generation failed"; exit 1; }
   log "SBOM generated"
 }
 
