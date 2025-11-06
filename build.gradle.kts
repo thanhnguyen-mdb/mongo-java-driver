@@ -61,8 +61,8 @@ tasks.cyclonedxBom {
     setSkipProjects(listOf(rootProject.name, "bom"))
     // Specified the type of project being built. Defaults to 'library'
     setProjectType("library")
-    // Specified the version of the CycloneDX specification to use. Defaults to '1.6'
-    setSchemaVersion("1.6")
+    // Specified the version of the CycloneDX specification to use. Defaults to '1.5'
+    setSchemaVersion("1.5")
     // Boms destination directory. Defaults to 'build/reports'
     setDestination(project.file("./"))
     // The file name for the generated BOMs (before the file format suffix). Defaults to 'bom'
